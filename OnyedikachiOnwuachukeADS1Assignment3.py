@@ -1,4 +1,4 @@
-# Importing the necessary Libraries needed for this Assignment
+#Importing the necessary Libraries needed for this Assignment
 import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
@@ -9,6 +9,8 @@ import cluster_tools as ct
 import scipy.optimize as opt
 from scipy.optimize import curve_fit
 import errors as err
+from sklearn.cluster import KMeans
+import matplotlib.lines as mlines
 
 """
 Creating a def function to read and clean the world bank dataset 
@@ -44,7 +46,7 @@ def read_and_clean_data(file_name):
     return agric_forest
 
 
-# Use the function
+# Using this function
 file_name = 'Agricandforest%GDPworldbankdata.csv'
 agric_forest = read_and_clean_data(file_name)
 print(agric_forest)
@@ -94,6 +96,9 @@ agric_forest_countries = select_countries_and_years(
     agric_forest, countries, years)
 print(agric_forest_countries)
 
+#Plotting a scatter matrix to show the least correlated data from the selected years and countries
+pd.plotting.scatter_matrix(agric_forest_countries, figsize=(9, 9), s=5, alpha=0.8)
+plt.show()
 
 def fit_agricforest(df, columns, cluster_range):
     """
@@ -137,17 +142,9 @@ columns = ["1980", "2020"]
 # Define the range of cluster numbers to try
 cluster_range = range(2, 7)
 
-# Use the function
-fit_agricforest(agric_forest_countries, columns, cluster_range)
-
-#Plotting the Fits and Kmeans and producing 4 clusters
-# Make sure ct.scaler function returns a DataFrame
-fit_agricforest, df_min, df_max = ct.scaler(
-    agric_forest_countries[["1980", "2020"]].copy())
-
 # Fit k-means with 4 clusters
-kmeans = cluster.KMeans(n_clusters=4)
-kmeans.fit(fit_agricforest)
+kmeans = KMeans(n_clusters=4)
+kmeans.fit(agric_forest_countries.copy())
 
 # Add cluster label column to the original dataframe
 agric_forest_countries["cluster_label"] = kmeans.labels_
@@ -155,23 +152,38 @@ agric_forest_countries["cluster_label"] = kmeans.labels_
 # Group countries by cluster label
 grouped = agric_forest_countries.groupby("cluster_label")
 
-# Print countries in each cluster
-for label, group in grouped:
-    print("Cluster", label)
-    print(group.index.tolist())
-    print()
+# Get the centroid points
+cen = kmeans.cluster_centers_
 
-# Plot clusters with labels
-plt.scatter(fit_agricforest["1980"],
-            fit_agricforest["2020"], c=kmeans.labels_, cmap="Set1")
-plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[
-            :, 1], color='k', marker="d", s=80)
+# Plot clusters with labels and centroids
+scatter = plt.scatter(agric_forest_countries["1980"], agric_forest_countries["2020"], c=kmeans.labels_, cmap="Set1")
+plt.scatter(cen[:, 0], cen[:, 1], color='k', marker="d", s=80)
 plt.xlabel("1980")
 plt.ylabel("2020")
 plt.title("Clusters Agriculture, forestry, and fishing, value added (% of GDP)")
 
-plt.show()
+# Get the unique colors from the scatter plot
+unique_colors = np.unique(scatter.get_array())
 
+# Filter out NaN values from unique_colors
+unique_colors = unique_colors[~np.isnan(unique_colors)]
+
+# Define custom colors for each cluster
+cluster_colors = ["red", "grey", "purple", "brown"]
+
+# Create custom legend handles for each cluster with corresponding colors
+legend_handles = []
+for label, color in zip(grouped.groups.keys(), cluster_colors):
+    legend_handles.append(mlines.Line2D([], [], color=color, marker='o', linestyle='None', label=f"Cluster {label}"))
+
+# Add legend
+plt.legend(handles=legend_handles)
+
+plt.show()
+"""
+Creating a def function to read and clean the world bank dataset 
+on Population total and return a clean dataframe:
+"""
 def pop_totC(file_name, countries):
     """
     Loads a CSV file, processes it, and selects specified countries.
@@ -208,7 +220,8 @@ print(pop_totC)
 
 
 """
-A def function in Plotting a subpplot for fitting the data sets with curve_fit for each country selected from
+A def function in Plotting a subpplot for fitting the 
+data sets with curve_fit for each country selected from
 each cluster for comparison for similarities or differencies using polymonial model
 """
 
@@ -260,13 +273,20 @@ def plot_polyfit(dataframe, countries, degree=3):
 
         # Add a legend
         ax.legend()
+        
+    # Set a common title for the entire plot
+    fig.suptitle('Population Trends and Polynomial Fits for Selected Countries', fontsize=16)
 
     plt.tight_layout()
     plt.show()
 
 plot_polyfit(pop_totC, ['South Africa', 'Kenya', 'Ghana', 'Niger'], degree=3)
 
-
+"""
+A def function in Plotting a subpplot for fitting the data sets with curve_fit 
+and the error rangefor each country selected fromeach cluster for comparison 
+for similarities or differencies using polymonial model
+"""
 def poly(t, c0, c1, c2, c3):
     """ Computes a polynomial c0 + c1*t + c2*t^2 + c3*t^3 """
     t = t - 1950
