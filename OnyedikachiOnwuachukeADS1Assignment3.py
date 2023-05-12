@@ -267,6 +267,64 @@ def plot_polyfit(dataframe, countries, degree=3):
 plot_polyfit(pop_totC, ['South Africa', 'Kenya', 'Ghana', 'Niger'], degree=3)
 
 
+def poly(t, c0, c1, c2, c3):
+    """ Computes a polynomial c0 + c1*t + c2*t^2 + c3*t^3 """
+    t = t - 1950
+    f = c0 + c1*t + c2*t**2 + c3*t**3
+    return f
+
+def err_ranges(x, func, popt, perr):
+    """ Calculate upper and lower errors """
+    popt_up = popt + perr
+    popt_dw = popt - perr
+    fit = func(x, *popt)
+    fit_up = func(x, *popt_up)
+    fit_dw = func(x, *popt_dw)
+    return fit_up, fit_dw
+
+def plot_population_projection(dataframe, countries):
+    """
+    This function generates a subplot grid and plots the population data for the specified countries,
+    along with a polynomial fit and its error ranges.
+
+    Parameters:
+    dataframe (pd.DataFrame): The dataframe containing population data.
+    countries (list): The list of countries to generate the plots for.
+
+    Returns:
+    None
+    """
+    # Ensure index is of integer type
+    dataframe.index = dataframe.index.astype(int)
+
+    # Initialize a figure
+    fig, axs = plt.subplots(2, 2, figsize=(10,10))
+
+    # Flattening axs for easy iterating
+    axs = axs.ravel()
+
+    # Loop over the countries list
+    for i, country in enumerate(countries):
+        popt, pcorr = curve_fit(poly, dataframe.index, dataframe[country])
+        print(f"Fit parameters for {country}: ", popt)
+        # extract variances and calculate sigmas
+        sigmas = np.sqrt(np.diag(pcorr))
+        # call function to calculate upper and lower limits with extrapolation
+        # create extended year range
+        years = np.arange(1950, 2051)
+        lower, upper = err_ranges(years, poly, popt, sigmas)
+        axs[i].plot(dataframe.index, dataframe[country], label="data")
+        axs[i].plot(years, poly(years, *popt), label="fit")
+        # plot error ranges with transparency
+        axs[i].fill_between(years, lower, upper, alpha=0.5)
+        axs[i].set_title(f"Polynomial Fit for {country}")
+        axs[i].legend(loc="upper left")
+
+    # Adjust layout for neatness
+    plt.tight_layout()
+    plt.show()
+
+plot_population_projection(pop_totC, ['South Africa', 'Kenya', 'Ghana', 'Niger'])
 
 
 
