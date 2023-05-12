@@ -141,9 +141,9 @@ cluster_range = range(2, 7)
 fit_agricforest(agric_forest_countries, columns, cluster_range)
 
 #Plotting the Fits and Kmeans and producing 4 clusters
-# Fit k-means with 4 clusters
 # Make sure ct.scaler function returns a DataFrame
-fit_agricforest, df_min, df_max = ct.scaler(agric_forest_countries[["1980", "2020"]].copy())
+fit_agricforest, df_min, df_max = ct.scaler(
+    agric_forest_countries[["1980", "2020"]].copy())
 
 # Fit k-means with 4 clusters
 kmeans = cluster.KMeans(n_clusters=4)
@@ -162,10 +162,113 @@ for label, group in grouped:
     print()
 
 # Plot clusters with labels
-plt.scatter(fit_agricforest["1980"], fit_agricforest["2020"], c=kmeans.labels_, cmap="Set1")
-plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[:, 1], color='k', marker="d", s=80)
+plt.scatter(fit_agricforest["1980"],
+            fit_agricforest["2020"], c=kmeans.labels_, cmap="Set1")
+plt.scatter(kmeans.cluster_centers_[:, 0], kmeans.cluster_centers_[
+            :, 1], color='k', marker="d", s=80)
 plt.xlabel("1980")
 plt.ylabel("2020")
 plt.title("Clusters Agriculture, forestry, and fishing, value added (% of GDP)")
 
 plt.show()
+
+def pop_totC(file_name, countries):
+    """
+    Loads a CSV file, processes it, and selects specified countries.
+
+    Parameters:
+    file_name (str): The name of the CSV file to load.
+    countries (list of str): The list of countries to select.
+
+    Returns:
+    pd.DataFrame: The processed DataFrame with selected countries.
+    """
+    df = pd.read_csv(file_name, skiprows=4)
+
+    df = df.drop(['Indicator Code', 'Country Code', 'Indicator Name'], axis=1)
+
+    df.set_index('Country Name', drop=True, inplace=True)
+
+    # Select specified countries and transpose the DataFrame
+    df_selected = df.loc[countries].transpose()
+
+    # Convert all values to numeric, coercing errors to NaN
+    df_selected = df_selected.applymap(lambda x: pd.to_numeric(x, errors='coerce'))
+
+    # Rename the index to 'Year'
+    df_selected = df_selected.rename_axis('Year')
+
+    return df_selected
+
+# Use the function
+file_name = 'populationwbdata.csv'
+countries = ['South Africa', 'Kenya', 'Ghana', 'Niger']
+pop_totC = pop_totC(file_name, countries)
+print(pop_totC)
+
+
+"""
+A def function in Plotting a subpplot for fitting the data sets with curve_fit for each country selected from
+each cluster for comparison for similarities or differencies using polymonial model
+"""
+
+def plot_polyfit(dataframe, countries, degree=3):
+    """
+    This function generates a subplot grid and plots the population data for the specified countries,
+    along with a polynomial fit.
+
+    Parameters:
+    dataframe (pd.DataFrame): The dataframe containing population data.
+    countries (list): The list of countries to generate the plots for.
+    degree (int): The degree of the polynomial to fit.
+
+    Returns:
+    None
+    """
+    from numpy.polynomial.polynomial import Polynomial
+    
+
+    # Determine subplot grid size based on number of countries
+    grid_size = int(np.ceil(np.sqrt(len(countries))))
+
+    fig, axs = plt.subplots(grid_size, grid_size, figsize=(12, 12))
+
+    # Flatten axs to iterate easily in the case of multiple subplots
+    axs = axs.flatten()
+
+    # Iterate over each country and each subplot
+    for ax, country in zip(axs, countries):
+        # Get the data for the current country
+        x_data = dataframe.index.values.astype(int)
+        y_data = dataframe[country].values
+
+        # Fit the polynomial to the data
+        p = Polynomial.fit(x_data, y_data, degree)
+
+        # Generate x values for the fitted function
+        x_fit = np.linspace(x_data.min(), x_data.max(), 1000)
+
+        # Calculate the fitted y values
+        y_fit = p(x_fit)
+
+        # Plot the original data and the fitted function
+        ax.plot(x_data, y_data, 'bo', label='Data')
+        ax.plot(x_fit, y_fit, 'r-', label='Fit')
+        ax.set_title(country)
+        ax.set_xlabel('Year')
+        ax.set_ylabel('Population')
+
+        # Add a legend
+        ax.legend()
+
+    plt.tight_layout()
+    plt.show()
+
+plot_polyfit(pop_totC, ['South Africa', 'Kenya', 'Ghana', 'Niger'], degree=3)
+
+
+
+
+
+
+
